@@ -14,6 +14,8 @@ from isaaclab_assets import BOOSTER_K1_CFG
 
 import isaaclab.sim as sim_utils
 from isaaclab.assets import ArticulationCfg
+from isaaclab.assets import RigidObjectCfg, DeformableBodyCfg, DeformableBody
+from isaaclab.assets import RigidObject
 from isaaclab.envs import DirectRLEnvCfg
 from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.sim import SimulationCfg
@@ -39,7 +41,7 @@ class BoosterK1EnvCfg(DirectRLEnvCfg):
     terrain = TerrainImporterCfg(
         prim_path="/World/Field",
         terrain_type="usd",
-        usd_path= os.path.expanduser("~/IsaacLab-nomadz/source/isaaclab_assets/data/Field.usd"),
+        usd_path= os.path.expanduser("./IsaacLab-nomadz/source/isaaclab_assets/data/Field.usd"),
         collision_group=-1,
         physics_material=sim_utils.RigidBodyMaterialCfg(
             friction_combine_mode="average",
@@ -49,6 +51,42 @@ class BoosterK1EnvCfg(DirectRLEnvCfg):
             restitution=0.0,
         ),
         debug_vis=False,
+    )
+
+    goal_post: RigidObjectCfg = RigidObjectCfg(
+        prim_path="/World/GoalPost",
+        usd_path=os.path.expanduser(
+            "./IsaacLab-nomadz/source/isaaclab_assets/data/goal_post.glb"
+),
+        scale=1.0,
+        mass=15.0,
+        collision=True,
+        collision_group=-1,
+        # optional per-object material override
+        physics_material=sim_utils.RigidBodyMaterialCfg(
+            friction_combine_mode="average",
+            restitution_combine_mode="average",
+            static_friction=0.8,
+            dynamic_friction=0.6,
+            restitution=0.0,
+        ),
+    )
+
+    ball: DeformableBodyCfg = DeformableBodyCfg(
+        prim_path="/World/Ball",
+        mesh_path=os.path.expanduser("./IsaacLab-nomadz/source/isaaclab_assets/data/ball.msh"),
+        usd_path=os.path.expanduser(
+            "./IsaacLab-nomadz/source/isaaclab_assets/data/ball.glb"
+        ),  # or .usd/.obj mesh exported for deformable
+        scale=1.0,
+        mass=0.43,
+        collision=True,
+        collision_group=-1,
+        # deformation / FEM params — tune to match your model
+        # field names depend on your isaaclab version; these are example keys
+        stiffness=1000.0,
+        damping=0.1,
+        thickness=0.02,
     )
 
     # scene
