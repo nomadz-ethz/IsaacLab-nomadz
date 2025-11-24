@@ -25,27 +25,25 @@ import os
 BOOSTER_K1_CFG = ArticulationCfg(
     prim_path="{ENV_REGEX_NS}/Robot",
     spawn=sim_utils.UsdFileCfg(
-        usd_path = os.path.expanduser("~/IsaacLab-nomadz/source/isaaclab_assets/data/Robots/K1/k1.usd"),
+        usd_path = os.path.expanduser("source/isaaclab_assets/data/Robots/K1/k1_joint_limit.usd"),
+        activate_contact_sensors=True,
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
-            disable_gravity=None,
+            disable_gravity=False,
+            retain_accelerations=False,
+            linear_damping=0.0,
+            angular_damping=0.0,
+            max_linear_velocity=1000.0,
+            max_angular_velocity=1000.0,
             max_depenetration_velocity=1.0,
-            enable_gyroscopic_forces=True,
         ),
         articulation_props=sim_utils.ArticulationRootPropertiesCfg(
             enabled_self_collisions=True,
-            solver_position_iteration_count=4,
-            solver_velocity_iteration_count=0,
-            sleep_threshold=0.005,
-            stabilization_threshold=0.001,
+            solver_position_iteration_count=8,
+            solver_velocity_iteration_count=4
         ),
-        copy_from_source=False,
-        
     ),
-    
-
-
     init_state=ArticulationCfg.InitialStateCfg(
-        pos=(0.0, 0.0, 1.34),
+        pos=(0.0, 0.0, 0.6),  #* arbitrary change z pos for Booster K1
         joint_pos={
             # Head
             "AAHead_Yaw": 0.0,
@@ -115,6 +113,15 @@ BOOSTER_K1_CFG = ArticulationCfg(
             damping=10.0,
             armature=0.01,
         ),
+        "head": ImplicitActuatorCfg(
+            joint_names_expr=["AAHead_Yaw", "Head_Pitch"],
+            effort_limit_sim=10.0,
+            velocity_limit_sim=8.0,
+            stiffness=20.0,
+            damping=2.0,
+            armature=0.01,
+        ),
+
     },
 )
 """Configuration for the Booster K1 Humanoid robot."""

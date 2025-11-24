@@ -2,6 +2,13 @@
 
 #==
 # Configurations
+CLUSTER_JOB_SCHEDULER="PBS"
+CLUSTER_ISAAC_SIM_CACHE_DIR="test-docker-isaac-sim"
+CLUSTER_ISAACLAB_DIR="test-isaac-lab"
+CLUSTER_LOGIN="yequek@euler.ethz.ch"
+CLUSTER_SIF_PATH="sif_images"
+REMOVE_CODE_COPY_AFTER_JOB=true
+CLUSTER_PYTHON_EXECUTABLE="python3"
 #==
 
 # Exits if error occurs

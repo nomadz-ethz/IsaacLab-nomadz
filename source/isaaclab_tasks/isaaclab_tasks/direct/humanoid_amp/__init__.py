@@ -44,3 +44,22 @@ gym.register(
         "skrl_amp_cfg_entry_point": f"{agents.__name__}:skrl_walk_amp_cfg.yaml",
     },
 )
+
+# from isaaclab_tasks.utils.hydra import register_task
+
+# register_task(
+#     name="Isaac-Humanoid-AMP-Run-Direct-v0",
+#     env_cfg_entry_point=f"{__name__}.humanoid_amp_env_cfg:HumanoidAmpRunEnvCfg",
+#     agent_cfg_entry_point="skrl:AMP",  # matches your AMP setup
+# )
+
+# register_task(
+#     name="Isaac-Humanoid-AMP-Dance-Direct-v0",
+#     env_cfg_entry_point=f"{__name__}.humanoid_amp_env_cfg:HumanoidAmpDanceEnvCfg",
+#     agent_cfg_entry_point="skrl:AMP",
+# )
+# register_task(
+#     name="Isaac-Humanoid-AMP-Walk-Direct-v0",
+#     env_cfg_entry_point=f"{__name__}.humanoid_amp_env_cfg:HumanoidAmpWalkEnvCfg",
+#     agent_cfg_entry_point="skrl:AMP",
+# )
