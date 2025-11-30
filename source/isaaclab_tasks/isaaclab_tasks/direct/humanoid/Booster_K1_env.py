@@ -39,7 +39,7 @@ class BoosterK1EnvCfg(DirectRLEnvCfg):
     terrain = TerrainImporterCfg(
         prim_path="/World/Field",
         terrain_type="usd",
-        usd_path= os.path.expanduser("~/IsaacLab-nomadz/source/isaaclab_assets/data/Environment/Field.usd"),
+        usd_path= os.path.expanduser("~/IsaacLab-nomadz/source/isaaclab_assets/data/Environment/spl_field (1).usd"),
         collision_group=-1,
         physics_material=sim_utils.RigidBodyMaterialCfg(
             friction_combine_mode="average",
@@ -210,6 +210,7 @@ class BoosterK1Env(LocomotionEnv):
         
         # Reset Balls initial position
         ball_state = self.ball.data.default_nodal_state_w
+
         self.ball.write_nodal_state_to_sim(ball_state, env_ids=env_ids)
 
         # Reset goals position  (Shouldnt be needed once floor is designed)
