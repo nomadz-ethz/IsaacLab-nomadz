@@ -7,8 +7,74 @@ from isaaclab.utils import configclass
 import isaaclab_tasks.manager_based.locomotion.velocity.mdp as mdp
 from isaaclab_tasks.manager_based.locomotion.velocity.velocity_env_cfg import LocomotionVelocityRoughEnvCfg, RewardsCfg
 
+from isaaclab.envs import ManagerBasedRLEnv
+from isaaclab.utils.math import quat_apply, quat_conjugate, quat_rotate_inverse
+from isaaclab.assets import Articulation
+from isaaclab.sensors import ContactSensor
+from isaaclab.managers import SceneEntityCfg
+
+import torch
+
 from isaaclab_assets import BOOSTER_K1_CFG  # isort: skip
 
+def feet_y_distance_penalty(env: ManagerBasedRLEnv) -> torch.Tensor:
+    robot = env.scene["robot"]
+    # find body indices
+    left_idx, _  = robot.find_bodies("left_foot_link")
+    right_idx, _ = robot.find_bodies("right_foot_link")
+
+    # world-frame foot positions (x,y,z)
+    left_pos  = robot.data.body_pose_w[:, left_idx, :3].squeeze(1)
+    right_pos = robot.data.body_pose_w[:, right_idx, :3].squeeze(1)
+
+    root_pos  = robot.data.root_pos_w  # [N,3]
+    root_quat = robot.data.root_quat_w  # [N,4], quaternion wxyz
+
+    # relative foot‑root vectors
+    vec_l = left_pos  - root_pos
+    vec_r = right_pos - root_pos
+
+    # rotate into body frame: conjugate of root_quat
+    root_quat_conj = quat_conjugate(root_quat)
+    left_body  = quat_apply(root_quat_conj, vec_l)
+    right_body = quat_apply(root_quat_conj, vec_r)
+
+    # measure lateral (y) distance and compare to target stance width
+    error = torch.abs(left_body[:, 1] - right_body[:, 1] - 0.250)
+
+    base_vel = robot.data.root_vel_w  # linear velocity of base in world frame
+    low_lat_vel = torch.abs(base_vel[:, 1]) < 0.1
+
+    return error * low_lat_vel.float()
+
+
+def body_orientation_l2(env: ManagerBasedRLEnv) -> torch.Tensor:
+    robot = env.scene["robot"]
+    g_body = robot.data.projected_gravity_b
+
+    return torch.sum(g_body[:, :2] ** 2, dim=1)
+
+
+def feet_stumble(
+    env: ManagerBasedRLEnv,
+    sensor_cfg: SceneEntityCfg = SceneEntityCfg("contact_forces", body_names=".*_foot$"),
+) -> torch.Tensor:
+    sensor: ContactSensor = env.scene.sensors[sensor_cfg.name]
+    forces = sensor.data.net_forces_w[:, sensor_cfg.body_ids]
+    horizontal = torch.norm(forces[..., :2], dim=-1)
+    vertical = torch.abs(forces[..., 2])
+    return torch.any(horizontal > 5.0 * vertical, dim=1).float()
+
+
+def feet_too_near(env: ManagerBasedRLEnv) -> torch.Tensor:
+    robot = env.scene["robot"]
+    l_idx, _ = robot.find_bodies("left_foot_link")
+    r_idx, _ = robot.find_bodies("right_foot_link")
+
+    lp = robot.data.body_pose_w[:, l_idx, :3].squeeze(1)
+    rp = robot.data.body_pose_w[:, r_idx, :3].squeeze(1)
+    dist = torch.norm(lp - rp, dim=-1)
+    return (0.15 - dist).clamp_min(0.0)
 
 @configclass
 class K1Rewards(RewardsCfg):
@@ -41,21 +107,27 @@ class K1Rewards(RewardsCfg):
         },
     )
 
+    # === Styling & robustness rewards ===
+    feet_y_distance      = RewTerm(func=feet_y_distance_penalty, weight=-2.0)
+    torso_upright        = RewTerm(func=body_orientation_l2,       weight=-2.0)
+    feet_stumble_penalty = RewTerm(func=feet_stumble,             weight=-2.0)
+    feet_too_close       = RewTerm(func=feet_too_near,            weight=-4.0)
+
     # Penalize ankle joint limits
     dof_pos_limits = RewTerm(
         func=mdp.joint_pos_limits,
-        weight=-1.0,
+        weight=-2.0,
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_Ankle_Pitch", ".*_Ankle_Roll"])},
     )
     # Penalize deviation from default of the joints that are not essential for locomotion
     joint_deviation_hip = RewTerm(
         func=mdp.joint_deviation_l1,
-        weight=-0.1,
+        weight=-2,
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_Hip_Yaw", ".*_Hip_Roll"])},
     )
     joint_deviation_arms = RewTerm(
         func=mdp.joint_deviation_l1,
-        weight=-0.1,
+        weight=-1,
         params={
             "asset_cfg": SceneEntityCfg(
                 "robot",
@@ -72,7 +144,7 @@ class K1Rewards(RewardsCfg):
     # Small penalty to keep head straight
     joint_deviation_head = RewTerm(
         func=mdp.joint_deviation_l1,
-        weight=-0.05,
+        weight=-1,
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=["AAHead_Yaw", "Head_Pitch"])},
     )
 

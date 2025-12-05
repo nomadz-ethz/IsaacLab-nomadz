@@ -25,7 +25,7 @@ import os
 BOOSTER_K1_CFG = ArticulationCfg(
     prim_path="{ENV_REGEX_NS}/Robot",
     spawn=sim_utils.UsdFileCfg(
-        usd_path = os.path.expanduser("source/isaaclab_assets/data/Robots/K1/k1_joint_limit.usd"),
+        usd_path = os.path.expanduser("source/isaaclab_assets/data/Robots/K1/k1.usd"),
         activate_contact_sensors=True,
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=False,
