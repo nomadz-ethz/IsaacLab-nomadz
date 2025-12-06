@@ -16,9 +16,10 @@ import isaaclab.sim as sim_utils
 from isaaclab.assets import ArticulationCfg, DeformableObjectCfg, DeformableObject, RigidObject, RigidObjectCfg, Articulation
 from isaaclab.envs import DirectRLEnvCfg
 from isaaclab.scene import InteractiveSceneCfg
-from isaaclab.sim import SimulationCfg
+from isaaclab.sim import SimulationCfg, schemas
 from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
+from isaaclab.sim.schemas import schemas_cfg
 import os
 
 from isaaclab_tasks.direct.locomotion.locomotion_env import LocomotionEnv
@@ -27,7 +28,7 @@ from isaaclab_tasks.direct.locomotion.locomotion_env import LocomotionEnv
 @configclass
 class BoosterK1EnvCfg(DirectRLEnvCfg):
     # env
-    episode_length_s = 15.0
+    episode_length_s = 100.0
     decimation = 2
     action_scale = 1.0
     action_space = 22
@@ -61,14 +62,12 @@ class BoosterK1EnvCfg(DirectRLEnvCfg):
             usd_path = os.path.expanduser(
                 "~/IsaacLab-nomadz/source/isaaclab_assets/data/Environment/Ball.usd"),
 
-            deformable_props=sim_utils.DeformableBodyPropertiesCfg(rest_offset=0.0, contact_offset=0.001),
+            deformable_props=sim_utils.DeformableBodyPropertiesCfg(deformable_enabled=True, rest_offset=0.0, contact_offset=0.001),
 
-            mass_props= sim_utils.MassPropertiesCfg(mass=0.044, density=-1)
         ),
 
         init_state=DeformableObjectCfg.InitialStateCfg(pos=(0.0, 0.0, 0.06)),
 
-        debug_vis=False,
 
     )
 
@@ -80,15 +79,12 @@ class BoosterK1EnvCfg(DirectRLEnvCfg):
 
             usd_path = os.path.expanduser(
                 "~/IsaacLab-nomadz/source/isaaclab_assets/data/Environment/Goal_Blue.usd"),
-
-            rigid_props = sim_utils.RigidBodyPropertiesCfg(),
-            mass_props = sim_utils.MassPropertiesCfg(mass=1.0),
-            collision_props = sim_utils.CollisionPropertiesCfg(),
         ),
 
-        init_state=RigidObjectCfg.InitialStateCfg(pos=(10.0, 0.0, 0.06),
-                                                  rot=(0.671592,  0.120338,  0.712431,  -0.164089)
+        init_state=RigidObjectCfg.InitialStateCfg(pos=(2.15, -1.8, 0.0),
+                                                  rot=(0.5,  0.5,  -0.5,  -0.5)
                                                   ),
+        collision_group = -1
     )
 
     # Goal red
@@ -99,14 +95,11 @@ class BoosterK1EnvCfg(DirectRLEnvCfg):
 
             usd_path = os.path.expanduser(
                 "~/IsaacLab-nomadz/source/isaaclab_assets/data/Environment/Goal_Red.usd"),
-
-            rigid_props = sim_utils.RigidBodyPropertiesCfg(),
-            mass_props = sim_utils.MassPropertiesCfg(mass=1.0),
-            collision_props = sim_utils.CollisionPropertiesCfg(),
         ),
-        init_state=RigidObjectCfg.InitialStateCfg(pos=(-10.0, 0.0, 0.06),
-                                                  rot=(0.523403,  0.677758, -0.513991, -0.080530)
-                                                  ),
+        init_state=RigidObjectCfg.InitialStateCfg(pos=(-7.35, -1.8, 0.0),
+                                                  rot=(0.5, 0.5, 0.5, 0.5)),
+
+        collision_group = -1
     )
 
     # scene
@@ -174,6 +167,9 @@ class BoosterK1Env(LocomotionEnv):
     def __init__(self, cfg: BoosterK1EnvCfg, render_mode: str | None = None, **kwargs):
         super().__init__(cfg, render_mode, **kwargs)
 
+        # So the simulation doesn't reset before the robot reaches the ground
+        self.cfg.termination_height = -1.0
+
 
     def _setup_scene(self):
          # Instantiate robot and objects before cloning environments to the scene
@@ -188,10 +184,38 @@ class BoosterK1Env(LocomotionEnv):
         self.terrain = self.cfg.terrain.class_type(self.cfg.terrain)
         # clone and replicate
         self.scene.clone_environments(copy_from_source=False)
-        # we need to explicitly filter collisions for CPU simulation
-        if self.device == "cpu":
-            self.scene.filter_collisions(global_prim_paths=[self.cfg.terrain.prim_path])
 
+        # Was filtering only with CPU. This allows the ball to colide with the ground
+        self.scene.filter_collisions(global_prim_paths=[self.cfg.terrain.prim_path])
+
+
+        # Goal USD had no physics API. This passes rigid body and collision API to the goals.
+        # With this they act as a rigid object and doesnt fall through the terrain
+        for i in range(self.scene.cfg.num_envs):
+            base = f"/World/envs/env_{i}"
+
+            for name in ["Goal_Blue", "Goal_Red"]:
+                path = f"{base}/{name}/{name}"
+
+                # Make kinematic so it doesn't get affected by gravity
+                schemas.define_rigid_body_properties(
+                    path,
+                    schemas_cfg.RigidBodyPropertiesCfg(
+                        rigid_body_enabled=True,
+                        kinematic_enabled=True ,   # key bit
+                    ),
+                )
+
+                # Ensure collider exists
+                schemas.define_collision_properties(
+                    path,
+                    schemas_cfg.CollisionPropertiesCfg(collision_enabled=True),
+                )
+
+
+        
+        collider_cfg = sim_utils.CollisionPropertiesCfg(collision_enabled=True)
+        sim_utils.define_collision_properties(self.cfg.terrain.prim_path, collider_cfg)
         # add articulation to scene
         self.scene.articulations["robot"] = self.robot
         # add objects to scene
