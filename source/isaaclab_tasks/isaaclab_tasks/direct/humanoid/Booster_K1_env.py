@@ -28,7 +28,7 @@ from isaaclab_tasks.direct.locomotion.locomotion_env import LocomotionEnv
 @configclass
 class BoosterK1EnvCfg(DirectRLEnvCfg):
     # env
-    episode_length_s = 100.0
+    episode_length_s = 20.0
     decimation = 2
     action_scale = 1.0
     action_space = 22
