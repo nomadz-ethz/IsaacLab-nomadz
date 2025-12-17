@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
 # in the case you need to load specific modules on the cluster, add them here
-# e.g., `module load eth_proxy`
+# e.g., `module load eth_proxy
+module load eth_proxy
 
 # create job script with compute demands
 ### MODIFY HERE FOR YOUR JOB ###

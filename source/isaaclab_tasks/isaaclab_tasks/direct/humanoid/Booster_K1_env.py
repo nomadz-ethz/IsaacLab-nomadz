@@ -13,12 +13,13 @@ from __future__ import annotations
 from isaaclab_assets import BOOSTER_K1_CFG
 
 import isaaclab.sim as sim_utils
-from isaaclab.assets import ArticulationCfg
+from isaaclab.assets import ArticulationCfg, DeformableObjectCfg, DeformableObject, RigidObject, RigidObjectCfg, Articulation
 from isaaclab.envs import DirectRLEnvCfg
 from isaaclab.scene import InteractiveSceneCfg
-from isaaclab.sim import SimulationCfg
+from isaaclab.sim import SimulationCfg, schemas
 from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
+from isaaclab.sim.schemas import schemas_cfg
 import os
 
 from isaaclab_tasks.direct.locomotion.locomotion_env import LocomotionEnv
@@ -27,7 +28,7 @@ from isaaclab_tasks.direct.locomotion.locomotion_env import LocomotionEnv
 @configclass
 class BoosterK1EnvCfg(DirectRLEnvCfg):
     # env
-    episode_length_s = 15.0
+    episode_length_s = 20.0
     decimation = 2
     action_scale = 1.0
     action_space = 22
@@ -39,7 +40,7 @@ class BoosterK1EnvCfg(DirectRLEnvCfg):
     terrain = TerrainImporterCfg(
         prim_path="/World/Field",
         terrain_type="usd",
-        usd_path= os.path.expanduser("~/IsaacLab-nomadz/source/isaaclab_assets/data/Field.usd"),
+        usd_path= os.path.expanduser("~/IsaacLab-nomadz/source/isaaclab_assets/data/Environment/spl_field (1).usd"),
         collision_group=-1,
         physics_material=sim_utils.RigidBodyMaterialCfg(
             friction_combine_mode="average",
@@ -51,8 +52,58 @@ class BoosterK1EnvCfg(DirectRLEnvCfg):
         debug_vis=False,
     )
 
+    # Ball
+    ball_cfg = DeformableObjectCfg(
+
+        prim_path="/World/envs/env_.*/Ball",
+
+        spawn=sim_utils.UsdFileCfg(
+
+            usd_path = os.path.expanduser(
+                "~/IsaacLab-nomadz/source/isaaclab_assets/data/Environment/Ball.usd"),
+
+            deformable_props=sim_utils.DeformableBodyPropertiesCfg(deformable_enabled=True, rest_offset=0.0, contact_offset=0.001),
+
+        ),
+
+        init_state=DeformableObjectCfg.InitialStateCfg(pos=(0.0, 0.0, 0.06)),
+
+
+    )
+
+    # Goal blue
+    goal_blue_cfg = RigidObjectCfg(
+        prim_path = "/World/envs/env_.*/Goal_Blue",
+
+        spawn=sim_utils.UsdFileCfg(
+
+            usd_path = os.path.expanduser(
+                "~/IsaacLab-nomadz/source/isaaclab_assets/data/Environment/Goal_Blue.usd"),
+        ),
+
+        init_state=RigidObjectCfg.InitialStateCfg(pos=(2.15, -1.8, 0.0),
+                                                  rot=(0.5,  0.5,  -0.5,  -0.5)
+                                                  ),
+        collision_group = -1
+    )
+
+    # Goal red
+    goal_red_cfg = RigidObjectCfg(
+        prim_path = "/World/envs/env_.*/Goal_Red",
+
+        spawn=sim_utils.UsdFileCfg(
+
+            usd_path = os.path.expanduser(
+                "~/IsaacLab-nomadz/source/isaaclab_assets/data/Environment/Goal_Red.usd"),
+        ),
+        init_state=RigidObjectCfg.InitialStateCfg(pos=(-7.35, -1.8, 0.0),
+                                                  rot=(0.5, 0.5, 0.5, 0.5)),
+
+        collision_group = -1
+    )
+
     # scene
-    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=4096, env_spacing=4.0, replicate_physics=True)
+    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=1, env_spacing=4.0, replicate_physics=True)
 
     # robot
     robot: ArticulationCfg = BOOSTER_K1_CFG.replace(prim_path="/World/envs/env_.*/Robot")
@@ -75,7 +126,6 @@ class BoosterK1EnvCfg(DirectRLEnvCfg):
         40.0,   # Right_Elbow_Yaw
     
         
-    
         45.0,   # Left_Hip_Pitch (legs - high effort)
         45.0,   # Right_Hip_Pitch
     
@@ -116,3 +166,83 @@ class BoosterK1Env(LocomotionEnv):
 
     def __init__(self, cfg: BoosterK1EnvCfg, render_mode: str | None = None, **kwargs):
         super().__init__(cfg, render_mode, **kwargs)
+
+        # So the simulation doesn't reset before the robot reaches the ground
+        self.cfg.termination_height = -1.0
+
+
+    def _setup_scene(self):
+         # Instantiate robot and objects before cloning environments to the scene
+        self.robot = Articulation(self.cfg.robot)
+        self.ball = DeformableObject(self.cfg.ball_cfg)
+        self.goal_blue = RigidObject(self.cfg.goal_blue_cfg)
+        self.goal_red = RigidObject(self.cfg.goal_red_cfg)
+
+        # add ground plane
+        self.cfg.terrain.num_envs = self.scene.cfg.num_envs
+        self.cfg.terrain.env_spacing = self.scene.cfg.env_spacing
+        self.terrain = self.cfg.terrain.class_type(self.cfg.terrain)
+        # clone and replicate
+        self.scene.clone_environments(copy_from_source=False)
+
+        # Was filtering only with CPU. This allows the ball to colide with the ground
+        self.scene.filter_collisions(global_prim_paths=[self.cfg.terrain.prim_path])
+
+
+        # Goal USD had no physics API. This passes rigid body and collision API to the goals.
+        # With this they act as a rigid object and doesnt fall through the terrain
+        for i in range(self.scene.cfg.num_envs):
+            base = f"/World/envs/env_{i}"
+
+            for name in ["Goal_Blue", "Goal_Red"]:
+                path = f"{base}/{name}/{name}"
+
+                # Make kinematic so it doesn't get affected by gravity
+                schemas.define_rigid_body_properties(
+                    path,
+                    schemas_cfg.RigidBodyPropertiesCfg(
+                        rigid_body_enabled=True,
+                        kinematic_enabled=True ,   # key bit
+                    ),
+                )
+
+                # Ensure collider exists
+                schemas.define_collision_properties(
+                    path,
+                    schemas_cfg.CollisionPropertiesCfg(collision_enabled=True),
+                )
+
+
+        
+        collider_cfg = sim_utils.CollisionPropertiesCfg(collision_enabled=True)
+        sim_utils.define_collision_properties(self.cfg.terrain.prim_path, collider_cfg)
+        # add articulation to scene
+        self.scene.articulations["robot"] = self.robot
+        # add objects to scene
+        self.scene.deformable_objects["Ball"] = self.ball
+        self.scene.rigid_objects["Goal_Red"] = self.goal_red
+        self.scene.rigid_objects["Goal_Blue"] = self.goal_blue
+    
+        # add lights
+        light_cfg = sim_utils.DomeLightCfg(intensity=2000.0, color=(0.75, 0.75, 0.75))
+        light_cfg.func("/World/Light", light_cfg)
+     
+
+    def _reset_idx(self, env_ids):
+
+        super()._reset_idx(env_ids)
+        
+        # Reset Balls initial position
+        ball_state = self.ball.data.default_nodal_state_w
+
+        self.ball.write_nodal_state_to_sim(ball_state, env_ids=env_ids)
+
+        # Reset goals position  (Shouldnt be needed once floor is designed)
+        goal_blue_state = self.goal_blue.data.default_root_state
+        goal_red_state = self.goal_red.data.default_root_state
+        self.goal_blue.write_root_state_to_sim(goal_blue_state, env_ids)
+        self.goal_red.write_root_state_to_sim(goal_red_state, env_ids)
+
+
+
+        
