@@ -21,6 +21,7 @@ from isaaclab.terrains import TerrainImporterCfg
 from isaaclab.utils import configclass
 from isaaclab.sim.schemas import schemas_cfg
 import os
+import torch
 
 from isaaclab_tasks.direct.locomotion.locomotion_env import LocomotionEnv
 
@@ -73,7 +74,7 @@ class BoosterK1EnvCfg(DirectRLEnvCfg):
 
     # Goal blue
     goal_blue_cfg = RigidObjectCfg(
-        prim_path = "/World/envs/env_.*/Goal_Blue",
+        prim_path = "/World/Goal_Blue",
 
         spawn=sim_utils.UsdFileCfg(
 
@@ -89,7 +90,7 @@ class BoosterK1EnvCfg(DirectRLEnvCfg):
 
     # Goal red
     goal_red_cfg = RigidObjectCfg(
-        prim_path = "/World/envs/env_.*/Goal_Red",
+        prim_path = "/World/Goal_Red",
 
         spawn=sim_utils.UsdFileCfg(
 
@@ -103,7 +104,7 @@ class BoosterK1EnvCfg(DirectRLEnvCfg):
     )
 
     # scene
-    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=1, env_spacing=4.0, replicate_physics=True)
+    scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=1, env_spacing=1.5, replicate_physics=True)
 
     # robot
     robot: ArticulationCfg = BOOSTER_K1_CFG.replace(prim_path="/World/envs/env_.*/Robot")
@@ -170,6 +171,8 @@ class BoosterK1Env(LocomotionEnv):
         # So the simulation doesn't reset before the robot reaches the ground
         self.cfg.termination_height = -1.0
 
+        self.joint_gears = torch.tensor(self.cfg.joint_gears, dtype=torch.float32, device=self.sim.device)
+
 
     def _setup_scene(self):
          # Instantiate robot and objects before cloning environments to the scene
@@ -191,14 +194,13 @@ class BoosterK1Env(LocomotionEnv):
 
         # Goal USD had no physics API. This passes rigid body and collision API to the goals.
         # With this they act as a rigid object and doesnt fall through the terrain
-        for i in range(self.scene.cfg.num_envs):
-            base = f"/World/envs/env_{i}"
+     
 
-            for name in ["Goal_Blue", "Goal_Red"]:
-                path = f"{base}/{name}/{name}"
+        for name in ["Goal_Blue", "Goal_Red"]:
+            path = f"/World/{name}/{name}"
 
                 # Make kinematic so it doesn't get affected by gravity
-                schemas.define_rigid_body_properties(
+            schemas.define_rigid_body_properties(
                     path,
                     schemas_cfg.RigidBodyPropertiesCfg(
                         rigid_body_enabled=True,
@@ -207,7 +209,7 @@ class BoosterK1Env(LocomotionEnv):
                 )
 
                 # Ensure collider exists
-                schemas.define_collision_properties(
+            schemas.define_collision_properties(
                     path,
                     schemas_cfg.CollisionPropertiesCfg(collision_enabled=True),
                 )

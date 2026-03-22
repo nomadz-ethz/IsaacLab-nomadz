@@ -66,6 +66,7 @@ class LocomotionEnv(DirectRLEnv):
         self.actions = actions.clone()
 
     def _apply_action(self):
+
         forces = self.action_scale * self.joint_gears * self.actions
         self.robot.set_joint_effort_target(forces, joint_ids=self._joint_dof_idx)
 

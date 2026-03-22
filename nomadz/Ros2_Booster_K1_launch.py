@@ -1,4 +1,5 @@
 import os
+import argparse
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription, GroupAction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
@@ -6,19 +7,22 @@ from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import PushRosNamespace
 from launch_ros.substitutions import FindPackageShare
 
+
+parser = argparse.ArgumentParser(description="Run Booster K1 Environment")
+parser.add_argument("--num_envs", type=int, default=1, help="Number of robots to simulate.")
+args = parser.parse_args()
+
 def generate_launch_description():
     isaaclab_path = os.environ.get('ISAACLAB_PATH', os.path.expanduser("~/IsaacLab"))
     nodes_dir = FindPackageShare("nodes")
     
     robot_namespace = LaunchConfiguration("robot_namespace")
-    task_name = LaunchConfiguration("task")
     
     isaaclab_sim = ExecuteProcess(
         cmd=[
             PathJoinSubstitution([isaaclab_path, "isaaclab.sh"]),
-            "-p", "scripts/reinforcement_learning/rsl_rl/train.py",
-            "--task", task_name,
-            "--num_envs", "1" 
+            "-p", "nomadz/Booster_K1_launcher.py",
+            "--num_envs", f" {args.num_envs}" 
         ],
         cwd=isaaclab_path,
         output='screen',
