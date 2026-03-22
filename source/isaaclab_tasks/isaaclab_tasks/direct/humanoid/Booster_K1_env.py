@@ -171,8 +171,6 @@ class BoosterK1Env(LocomotionEnv):
         # So the simulation doesn't reset before the robot reaches the ground
         self.cfg.termination_height = -1.0
 
-        self.joint_gears = torch.tensor(self.cfg.joint_gears, dtype=torch.float32, device=self.sim.device)
-
 
     def _setup_scene(self):
          # Instantiate robot and objects before cloning environments to the scene
