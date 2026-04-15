@@ -69,3 +69,8 @@ tests/
 
 # Docker history
 .isaac-lab-docker-history
+
+#ROS 2 Workspae
+ros2_ws/install
+ros2_ws/log
+
