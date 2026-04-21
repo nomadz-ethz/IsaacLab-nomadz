@@ -1,1 +1,0 @@
-# nomadz_bringup package

@@ -1,19 +1,22 @@
 <?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
   <name>nomadz_bringup</name>
-  <version>0.0.1</version>
+  <version>0.0.0</version>
   <description>ROS 2 bringup package for Nomadz robots in Isaac Lab.</description>
+  <maintainer email="emerson.aguiar16@gmail.com">emerson</maintainer>
+  <license>Apache License 2.0</license>
 
-  <maintainer email="your_email@example.com">Emerson</maintainer>
-  <license>BSD-3-Clause</license>
-
-  <buildtool_depend>ament_python</buildtool_depend>
+  <buildtool_depend>ament_cmake</buildtool_depend>
 
   <exec_depend>launch</exec_depend>
   <exec_depend>launch_ros</exec_depend>
   <exec_depend>teleop_twist_keyboard</exec_depend>
 
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
   <export>
-    <build_type>ament_python</build_type>
+    <build_type>ament_cmake</build_type>
   </export>
 </package>
