@@ -164,6 +164,7 @@ Guidelines for modifications:
 * Xavier Nal
 * Xiaodi Yuan
 * Xinjie Yao
+* Xinjie Yao
 * Xinpeng Liu
 * Yang Jin
 * Yanzi Zhu
@@ -171,6 +172,8 @@ Guidelines for modifications:
 * Yohan Choi
 * Yujian Zhang
 * Yun Liu
+* Zehao Wang
+* Zijian Li
 * Ziqi Fan
 * Zoe McCarthy
 * David Leon
