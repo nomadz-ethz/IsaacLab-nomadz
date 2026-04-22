@@ -91,7 +91,7 @@ class K1Rewards(RewardsCfg):
     )
     feet_air_time = RewTerm(
         func=mdp.feet_air_time_positive_biped,
-        weight=0.25,
+        weight=0.5,
         params={
             "command_name": "base_velocity",
             "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_foot_link"),
@@ -111,18 +111,26 @@ class K1Rewards(RewardsCfg):
     feet_y_distance      = RewTerm(func=feet_y_distance_penalty, weight=-2.0)
     torso_upright        = RewTerm(func=body_orientation_l2,       weight=-2.0)
     feet_stumble_penalty = RewTerm(func=feet_stumble,             weight=-2.0)
-    feet_too_close       = RewTerm(func=feet_too_near,            weight=-4.0)
+    feet_too_close       = RewTerm(func=feet_too_near,            weight=-2.0)
 
     # Penalize ankle joint limits
     dof_pos_limits = RewTerm(
         func=mdp.joint_pos_limits,
-        weight=-2.0,
+        weight=-1.0,
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_Ankle_Pitch", ".*_Ankle_Roll"])},
     )
+    
+    #Penalize ankle roll excessive movement
+    ankle_roll_deviation = RewTerm(
+        func=mdp.joint_deviation_l1,
+        weight=-1.0,
+        params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_Ankle_Roll"])},
+    ) 
+
     # Penalize deviation from default of the joints that are not essential for locomotion
     joint_deviation_hip = RewTerm(
         func=mdp.joint_deviation_l1,
-        weight=-2,
+        weight=-0.8,
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=[".*_Hip_Yaw", ".*_Hip_Roll"])},
     )
     joint_deviation_arms = RewTerm(

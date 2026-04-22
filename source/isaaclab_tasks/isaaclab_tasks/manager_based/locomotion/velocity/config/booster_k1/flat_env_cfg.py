@@ -37,9 +37,9 @@ class K1FlatEnvCfg(K1RoughEnvCfg):
             "robot", joint_names=[".*_Hip_.*", ".*_Knee_Pitch"]
         )
         # Commands
-        self.commands.base_velocity.ranges.lin_vel_x = (0.0, 3.5)
-        self.commands.base_velocity.ranges.lin_vel_y = (-0.5, 0.5)
-        self.commands.base_velocity.ranges.ang_vel_z = (-1.0, 1.0)
+        self.commands.base_velocity.ranges.lin_vel_x = (0.0, 4.5)
+        self.commands.base_velocity.ranges.lin_vel_y = (-1.0, 1.0)
+        self.commands.base_velocity.ranges.ang_vel_z = (-2.0, 2.0)
 
 
 class K1FlatEnvCfg_PLAY(K1FlatEnvCfg):
@@ -53,7 +53,7 @@ class K1FlatEnvCfg_PLAY(K1FlatEnvCfg):
         # disable randomization for play
         self.observations.policy.enable_corruption = False
         
-        self.commands.base_velocity.ranges.lin_vel_x = (1.5, 3.5)
+        self.commands.base_velocity.ranges.lin_vel_x = (1.5, 4.5)
         self.commands.base_velocity.ranges.lin_vel_y = (-0.5, 0.5)
         self.commands.base_velocity.ranges.ang_vel_z = (-1.0, 1.0)
         # remove random pushing

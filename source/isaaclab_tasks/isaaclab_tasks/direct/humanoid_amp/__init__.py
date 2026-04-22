@@ -45,6 +45,18 @@ gym.register(
     },
 )
 
+
+gym.register(
+    id="Isaac-BoosterK1-AMP-Kick-Direct-v0",
+    entry_point=f"{__name__}.booster_amp_env:BoosterK1AmpEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point":
+            f"{__name__}.booster_amp_env_cfg:BoosterK1AmpEnvCfg",
+        "skrl_cfg_entry_point":
+            f"{agents.__name__}:skrl_walk_amp_cfg.yaml",
+    },
+)
 # from isaaclab_tasks.utils.hydra import register_task
 
 # register_task(
