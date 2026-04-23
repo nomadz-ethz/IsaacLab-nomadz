@@ -34,7 +34,17 @@ ENV DOCKER_USER_HOME=${DOCKER_USER_HOME_ARG}
 ENV LANG=C.UTF-8
 ENV DEBIAN_FRONTEND=noninteractive
 
+ENV ROS_DISTRO=humble
+ENV RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+ENV ROS_DOMAIN_ID=42
+ENV FASTRTPS_DEFAULT_PROFILES_FILE=/root/.ros/fastdds.xml
+ENV LD_LIBRARY_PATH=/isaac-sim/exts/isaacsim.ros2.bridge/humble/lib:${LD_LIBRARY_PATH}
+
 USER root
+
+#Set up FASTDDS for ROS2 Bridge
+RUN mkdir -p /root/.ros
+COPY docker/.ros/fastdds.xml /root/.ros/fastdds.xml
 
 # Install dependencies and remove cache
 RUN --mount=type=cache,target=/var/cache/apt \

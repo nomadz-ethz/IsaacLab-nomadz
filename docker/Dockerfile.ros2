@@ -24,9 +24,16 @@ RUN apt-get update && \
     . /opt/ros/humble/setup.sh && \
     colcon build --symlink-install
 
+# Set Enviroment variables
+ENV RMW_IMPLEMENTATION=rmw_fastrtps_cpp
+ENV ROS_DOMAIN_ID=42
+
 # Source ROS2 and workspace in bashrc
 RUN echo "source /opt/ros/humble/setup.bash" >> /etc/bash.bashrc
 RUN echo "source /IsaacSim-ros_workspaces/humble_ws/install/local_setup.bash" >> /etc/bash.bashrc
+
+RUN mkdir -p /root/.ros
+COPY docker/.ros/fastdds.xml /root/.ros/fastdds.xml
 
 WORKDIR /IsaacSim-ros_workspaces/humble_ws
 
