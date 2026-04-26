@@ -33,18 +33,8 @@ def generate_launch_description():
         output="screen",
     )
 
-    robot_nodes = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(
-            PathJoinSubstitution([bringup_pkg, "launch", "sim_robot_nodes.launch.py"])
-        ),
-        launch_arguments={
-            "robot_namespace": robot_namespace,
-        }.items(),
-    )
-
     namespaced_group = GroupAction([
         PushRosNamespace(robot_namespace),
-        robot_nodes,
     ])
 
     return LaunchDescription([

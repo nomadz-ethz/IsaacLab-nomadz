@@ -43,64 +43,46 @@ def create_ros2_camera_publish_graph(
     )
 
 
-def setup_booster_k1_realsense_publishers(env_index: int = 0, namespace: str = "/robot1"):
-    base = f"/World/envs/env_{env_index}/Robot/head_pitch_link/Realsense/RSD455"
+def setup_booster_realsense_publishers(env_index: int, namespace: str, robot_type: str):
+    if robot_type == "k1":
+        base = f"/World/envs/env_{env_index}/Robot/head_pitch_link/Realsense/RSD455"
+    else:
+        base = f"/World/envs/env_{env_index}/Robot/H2/Realsense/RSD455"
+
+    camera_prim_base = f"/World/envs/env_{env_index}/Camera_Graphs"
 
     create_ros2_camera_publish_graph(
-        graph_path=f"/World/ROS2_BoosterK1_ColorCamera_{env_index}",
+        graph_path=f"{camera_prim_base}/ROS2_BoosterK1_ColorCamera_{env_index}",
         camera_prim=f"{base}/Camera_OmniVision_OV9782_Color",
         image_topic=f"{namespace}/camera/color/image_raw",
         camera_info_topic=f"{namespace}/camera/color/camera_info",
-        frame_id="booster_k1_color_optical_frame",
+        frame_id=f"booster_{robot_type}_color_optical_frame",
         camera_type="rgb",
     )
 
     create_ros2_camera_publish_graph(
-        graph_path=f"/World/ROS2_BoosterK1_DepthCamera_{env_index}",
+        graph_path=f"{camera_prim_base}/ROS2_BoosterK1_DepthCamera_{env_index}",
         camera_prim=f"{base}/Camera_Pseudo_Depth",
         image_topic=f"{namespace}/camera/depth/image_raw",
         camera_info_topic=f"{namespace}/camera/depth/camera_info",
-        frame_id="booster_k1_depth_optical_frame",
+        frame_id=f"booster_{robot_type}_depth_optical_frame",
         camera_type="depth",
     )
 
     create_ros2_camera_publish_graph(
-        graph_path=f"/World/ROS2_BoosterK1_LeftCamera_{env_index}",
+        graph_path=f"{camera_prim_base}/ROS2_BoosterK1_LeftCamera_{env_index}",
         camera_prim=f"{base}/Camera_OmniVision_OV9782_Left",
         image_topic=f"{namespace}/camera/left/image_raw",
         camera_info_topic=f"{namespace}/camera/left/camera_info",
-        frame_id="booster_k1_left_optical_frame",
+        frame_id=f"booster_{robot_type}_left_optical_frame",
         camera_type="rgb",
     )
 
     create_ros2_camera_publish_graph(
-        graph_path=f"/World/ROS2_BoosterK1_RightCamera_{env_index}",
+        graph_path=f"{camera_prim_base}/ROS2_BoosterK1_RightCamera_{env_index}",
         camera_prim=f"{base}/Camera_OmniVision_OV9782_Right",
         image_topic=f"{namespace}/camera/right/image_raw",
         camera_info_topic=f"{namespace}/camera/right/camera_info",
-        frame_id="booster_k1_right_optical_frame",
+        frame_id=f"booster_{robot_type}_right_optical_frame",
         camera_type="rgb",
-    )
-
-
-def setup_booster_k1_joint_state_publisher(
-    target_prim: str = "/World/envs/env_0/Robot",
-    topic_name: str = "/robot1/joint_states",
-    graph_path: str = "/World/ROS2_BoosterK1_JointStateGraph",
-):
-    og.Controller.edit(
-        {"graph_path": graph_path, "evaluator_name": "execution"},
-        {
-            og.Controller.Keys.CREATE_NODES: [
-                ("OnPlaybackTick", "omni.graph.action.OnPlaybackTick"),
-                ("JointStatePub", "isaacsim.ros2.bridge.ROS2PublishJointState"),
-            ],
-            og.Controller.Keys.SET_VALUES: [
-                ("JointStatePub.inputs:targetPrim", target_prim),
-                ("JointStatePub.inputs:topicName", topic_name),
-            ],
-            og.Controller.Keys.CONNECT: [
-                ("OnPlaybackTick.outputs:tick", "JointStatePub.inputs:execIn"),
-            ],
-        },
     )

@@ -4,7 +4,7 @@ from isaaclab.app import AppLauncher
 
 parser = argparse.ArgumentParser(description="Run Booster K1 Environment")
 parser.add_argument("--num_envs", type=int, default=1, help="Number of robots to simulate.")
-parser.add_argument("--robot_namespace", type=str, default="robot1", help="ROS namespace for this robot.")
+parser.add_argument("--robot_namespace", type=str, default="k1", help="ROS namespace for this robot.")
 AppLauncher.add_app_launcher_args(parser)
 args_cli = parser.parse_args()
 
@@ -17,10 +17,7 @@ enable_extension("isaacsim.ros2.bridge")
 import torch
 
 from isaaclab_tasks.direct.humanoid.Booster_K1_env import BoosterK1Env, BoosterK1EnvCfg
-from nomadz.ros2_graphs import (
-    setup_booster_k1_realsense_publishers,
-    setup_booster_k1_joint_state_publisher,
-)
+from nomadz.ros2_graphs import setup_booster_realsense_publishers
 
 
 def main():
@@ -30,16 +27,8 @@ def main():
     env_cfg.scene.num_envs = args_cli.num_envs
     env = BoosterK1Env(cfg=env_cfg)
 
-    setup_booster_k1_realsense_publishers(env_index=0, namespace=namespace)
-    '''
-    setup_booster_k1_joint_state_publisher(
-        target_prim="/World/envs/env_0/Robot",
-        topic_name=f"{namespace}/joint_states",
-        graph_path="/World/ROS2_BoosterK1_JointStates",
-    )
-
-    '''
-    
+    setup_booster_realsense_publishers(env_index=0, namespace=namespace, robot_type="k1")
+ 
     print("[INFO]: Environment setup complete. Starting loop...")
 
     while simulation_app.is_running():
