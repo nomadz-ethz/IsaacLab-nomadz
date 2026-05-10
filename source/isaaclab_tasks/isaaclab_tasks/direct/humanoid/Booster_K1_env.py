@@ -59,7 +59,7 @@ class BoosterK1EnvCfg(DirectRLEnvCfg):
     spawn=sim_utils.UsdFileCfg(
         usd_path=os.path.expanduser(
             "~/IsaacLab-nomadz/source/isaaclab_assets/data/Environment/Ball_Rigid.usd"
-        )
+        ),
     ),
 
     collision_group=-1,
@@ -85,37 +85,28 @@ class BoosterK1EnvCfg(DirectRLEnvCfg):
 
     )
     '''
-    
+
 
     # Goal blue
-    goal_blue_cfg = RigidObjectCfg(
-        prim_path = "/World/Goal_Blue",
-
-        spawn=sim_utils.UsdFileCfg(
+    blue_goal = sim_utils.UsdFileCfg(
 
             usd_path = os.path.expanduser(
                 "~/IsaacLab-nomadz/source/isaaclab_assets/data/Environment/Goal_Blue.usd"),
+            
+            rigid_props = sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=True),
+            collision_props = sim_utils.CollisionPropertiesCfg(),
+            mass_props = sim_utils.MassPropertiesCfg(mass=1.0)
                     
-        ),
-
-        init_state=RigidObjectCfg.InitialStateCfg(pos=(2.15, -1.8, 0.0),
-                                                  rot=(0.70712,  0.0,  0.0,  -0.7071)
-                                                  ),
-        collision_group = -1
-    )
+        )
 
     # Goal red
-    goal_red_cfg = RigidObjectCfg(
-        prim_path = "/World/Goal_Red",
-        spawn=sim_utils.UsdFileCfg(
+    red_goal = sim_utils.UsdFileCfg(
             usd_path = os.path.expanduser(
                 "~/IsaacLab-nomadz/source/isaaclab_assets/data/Environment/Goal_Red.usd"),
-        ),
-        init_state=RigidObjectCfg.InitialStateCfg(pos=(-7.35, -1.8, 0.0),
-                                                   rot=(0.70712,  0.0,  0.0,  0.7071)),
-
-        collision_group = -1
-    )
+            rigid_props = sim_utils.RigidBodyPropertiesCfg(kinematic_enabled=True),
+            collision_props = sim_utils.CollisionPropertiesCfg(),
+            mass_props = sim_utils.MassPropertiesCfg(mass=1.0)
+        )
 
     # scene
     scene: InteractiveSceneCfg = InteractiveSceneCfg(num_envs=1, env_spacing=1.5, replicate_physics=True)
@@ -170,7 +161,7 @@ class BoosterK1EnvCfg(DirectRLEnvCfg):
     dof_vel_scale: float = 0.1
 
     death_cost: float = -1.0
-    termination_height: float = 0.8
+    termination_height: float = 0.2
 
     angular_velocity_scale: float = 0.25
     contact_force_scale: float = 0.01
@@ -182,16 +173,10 @@ class BoosterK1Env(LocomotionEnv):
     def __init__(self, cfg: BoosterK1EnvCfg, render_mode: str | None = None, **kwargs):
         super().__init__(cfg, render_mode, **kwargs)
 
-        # So the simulation doesn't reset before the robot reaches the ground
-        self.cfg.termination_height = -1.0
-
-
     def _setup_scene(self):
          # Instantiate robot and objects before cloning environments to the scene
         self.robot = Articulation(self.cfg.robot)
         self.ball = RigidObject(self.cfg.ball_cfg)
-        self.goal_blue = RigidObject(self.cfg.goal_blue_cfg)
-        self.goal_red = RigidObject(self.cfg.goal_red_cfg)
 
         # add ground plane
         self.cfg.terrain.num_envs = self.scene.cfg.num_envs
@@ -200,44 +185,24 @@ class BoosterK1Env(LocomotionEnv):
         # clone and replicate
         self.scene.clone_environments(copy_from_source=False)
 
-        # Was filtering only with CPU. This allows the ball to colide with the ground
-        self.scene.filter_collisions(global_prim_paths=[self.cfg.terrain.prim_path])
-
-
-        # Goal USD had no physics API. This passes rigid body and collision API to the goals.
-        # With this they act as a rigid object and doesnt fall through the terrain
-        for name in ["Goal_Blue", "Goal_Red"]:
-            path = f"/World/{name}/{name}"
-
-                # Make kinematic so it doesn't get affected by gravity
-            schemas.define_rigid_body_properties(
-                    path,
-                    schemas_cfg.RigidBodyPropertiesCfg(
-                        rigid_body_enabled=True,
-                        kinematic_enabled=True ,   # key bit
-                    ),
-                )
-
-        # Ensure Balls collide
-        for env_id in range(self.scene.cfg.num_envs):
-            ball_body_path = f"/World/envs/env_{env_id}/Ball/Ball"  # adjust child name if needed
-
-            schemas.define_collision_properties(ball_body_path,
-                                                schemas_cfg.CollisionPropertiesCfg(collision_enabled=True),)
-    
-        collider_cfg = sim_utils.CollisionPropertiesCfg(collision_enabled=True)
+        # Enable Terrain Collision
+        collider_cfg = sim_utils.CollisionPropertiesCfg(collision_enabled=True,contact_offset=0.02,rest_offset=0.0)
         sim_utils.define_collision_properties(self.cfg.terrain.prim_path, collider_cfg)
+
         # add articulation to scene
         self.scene.articulations["robot"] = self.robot
         # add objects to scene
         # self.scene.deformable_objects["Ball"] = self.ball
         self.scene.rigid_objects["Ball"] = self.ball
-        self.scene.rigid_objects["Goal_Red"] = self.goal_red
-        self.scene.rigid_objects["Goal_Blue"] = self.goal_blue
-    
+       
         # add lights
         light_cfg = sim_utils.DomeLightCfg(intensity=2000.0, color=(0.75, 0.75, 0.75))
         light_cfg.func("/World/Light", light_cfg)
+
+        # add goals
+        self.cfg.blue_goal.func("/World/Goal_Blue", self.cfg.blue_goal, translation=(2.15, -1.8, 0.0), orientation=(0.70712,  0.0,  0.0,  -0.7071))
+        self.cfg.red_goal.func("/World/Goal_Red", self.cfg.red_goal, translation=(-7.35, -1.8, 0.0), orientation=(0.70712,  0.0,  0.0,  0.7071))
+        
      
 
     def _reset_idx(self, env_ids):
@@ -250,11 +215,6 @@ class BoosterK1Env(LocomotionEnv):
         ball_state = self.ball.data.default_root_state
         self.ball.write_root_state_to_sim(ball_state, env_ids)
 
-        # Reset goals position  (Shouldnt be needed once floor is designed)
-        goal_blue_state = self.goal_blue.data.default_root_state
-        goal_red_state = self.goal_red.data.default_root_state
-        self.goal_blue.write_root_state_to_sim(goal_blue_state, env_ids)
-        self.goal_red.write_root_state_to_sim(goal_red_state, env_ids)
 
 
 
